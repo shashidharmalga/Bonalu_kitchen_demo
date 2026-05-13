@@ -6,6 +6,7 @@ import '../../features/onboarding/splash_screen.dart';
 import '../../features/cart/cart_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/orders/orders_screen.dart';
+import '../../features/menu/menu_screen.dart';
 
 class AppRouter {
   static final router = GoRouter(
@@ -24,6 +25,10 @@ class AppRouter {
         builder: (context, state) => const HomeScreen(),
       ),
       GoRoute(
+        path: '/menu',
+        builder: (context, state) => const MenuScreen(),
+      ),
+      GoRoute(
         path: '/cart',
         builder: (context, state) => const CartScreen(),
       ),
@@ -35,7 +40,6 @@ class AppRouter {
         path: '/orders',
         builder: (context, state) => const OrdersScreen(),
       ),
-      // To be expanded as screens are implemented
     ],
   );
 }

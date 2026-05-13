@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../shared/providers/cart_provider.dart';
+import '../../shared/providers/orders_provider.dart';
 import 'package:go_router/go_router.dart';
 
 class CartScreen extends ConsumerWidget {
@@ -34,7 +36,7 @@ class CartScreen extends ConsumerWidget {
                     },
                   ),
                 ),
-                _buildOrderSummary(context, cartNotifier),
+                _buildOrderSummary(context, cartNotifier, ref),
               ],
             ),
     );
@@ -128,7 +130,7 @@ class CartScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildOrderSummary(BuildContext context, CartNotifier notifier) {
+  Widget _buildOrderSummary(BuildContext context, CartNotifier notifier, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.all(30),
       decoration: BoxDecoration(
@@ -153,6 +155,8 @@ class CartScreen extends ConsumerWidget {
             height: 60,
             child: ElevatedButton(
               onPressed: () {
+                // Save order before clearing cart
+                ref.read(ordersProvider.notifier).addOrder(ref.read(cartProvider), notifier.total);
                 // Show success animation or navigate
                 _showSuccessDialog(context, notifier);
               },

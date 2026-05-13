@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/mock_data.dart';
 import '../../shared/widgets/food_card.dart';
 import '../../shared/widgets/category_chip.dart';
+import '../../shared/widgets/category_tab.dart';
 import '../../shared/widgets/item_detail_sheet.dart';
 import '../../shared/providers/cart_provider.dart';
+import '../../shared/widgets/bottom_nav_bar.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -18,9 +20,26 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   String selectedCategory = 'Starters';
+  final PageController _offersController = PageController(viewportFraction: 0.9);
+
+  String _getEmojiForCategory(String category) {
+    switch (category) {
+      case 'Starters': return '🥙';
+      case 'Biryani': return '🥘';
+      case 'Main Course': return '🍛';
+      case 'Rolls': return '🌯';
+      case 'Chinese': return '🍜';
+      case 'Desserts': return '🍰';
+      case 'Beverages': return '🥤';
+      default: return '🍔';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final popularItems = MockData.foodItems.where((item) => item.category == selectedCategory).toList();
+    final itemsToDisplay = popularItems.isNotEmpty ? popularItems : MockData.foodItems;
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -73,22 +92,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               
               // Offers Carousel
               SizedBox(
-                height: 180,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                height: 80,
+                child: PageView(
+                  controller: _offersController,
+                  padEnds: false,
                   children: [
-                    _buildOfferCard(
+                    _buildCouponCard(
                       context,
-                      '50% OFF',
-                      'On all Biryani orders today!',
-                      Colors.orangeAccent,
+                      '10% off upto ₹75',
+                      'USE VISAPLATINUMDC | ABOVE ₹300',
+                      'VISA',
+                      Colors.blue.shade900,
                     ),
-                    _buildOfferCard(
+                    _buildCouponCard(
+                      context,
+                      '20% off upto ₹100',
+                      'USE MASTERCARD | ABOVE ₹500',
+                      'MASTER',
+                      Colors.orange.shade900,
+                    ),
+                    _buildCouponCard(
                       context,
                       'FREE DELIVERY',
-                      'For orders above ₹500',
-                      Colors.blueAccent,
+                      'USE NEWUSER | ON FIRST ORDER',
+                      'GIFT',
+                      Theme.of(context).colorScheme.primary,
+                    ),
+                    _buildCouponCard(
+                      context,
+                      '₹50 CASHBACK',
+                      'USE PAYTM50 | ABOVE ₹200',
+                      'PAYTM',
+                      Colors.lightBlue.shade800,
                     ),
                   ],
                 ),
@@ -100,68 +135,136 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Text(
-                  'Categories',
+                  'Explore by Category',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
               const SizedBox(height: 16),
-              SizedBox(
-                height: 50,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  itemCount: MockData.categories.length,
-                  itemBuilder: (context, index) {
-                    final category = MockData.categories[index];
-                    return CategoryChip(
-                      label: category,
-                      isSelected: selectedCategory == category,
-                      onTap: () => setState(() => selectedCategory = category),
-                    );
-                  },
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: SizedBox(
+                  height: 120,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: MockData.categories.length,
+                    itemBuilder: (context, index) {
+                      final category = MockData.categories[index];
+                      return SwiggyCategoryTab(
+                        label: category,
+                        emoji: _getEmojiForCategory(category),
+                        isSelected: selectedCategory == category,
+                        onTap: () => setState(() => selectedCategory = category),
+                      );
+                    },
+                  ),
                 ),
               ).animate().fadeIn(delay: 400.ms),
               
-              const SizedBox(height: 32),
-              
-              // Featured Section
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              // Popular Now Grid mapped to active category
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 32),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(0), // flush with tabs
+                    bottom: Radius.circular(24),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Popular Now',
-                      style: Theme.of(context).textTheme.titleLarge,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Popular in $selectedCategory',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          TextButton(
+                            onPressed: () {},
+                            child: const Text('See All'),
+                          ),
+                        ],
+                      ),
                     ),
-                    TextButton(
-                      onPressed: () {},
-                      child: const Text('See All'),
+                    const SizedBox(height: 16),
+                    Builder(
+                      builder: (context) {
+                        final showTwoRows = itemsToDisplay.length > 3;
+                        final midPoint = showTwoRows ? (itemsToDisplay.length / 2).ceil() : itemsToDisplay.length;
+                        final topRowItems = itemsToDisplay.take(midPoint).toList();
+                        final bottomRowItems = showTwoRows ? itemsToDisplay.skip(midPoint).toList() : [];
+
+                        return Column(
+                          children: [
+                            SizedBox(
+                              height: 210, // Increased height for compact card to avoid overflow
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                padding: const EdgeInsets.symmetric(horizontal: 24),
+                                itemCount: topRowItems.length,
+                                itemBuilder: (context, index) {
+                                  final item = topRowItems[index];
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 16),
+                                    child: SizedBox(
+                                      width: 160,
+                                      child: FoodCard(
+                                        item: item,
+                                        isCompact: true,
+                                        onTap: () {
+                                          showModalBottomSheet(
+                                            context: context,
+                                            isScrollControlled: true,
+                                            backgroundColor: Colors.transparent,
+                                            builder: (context) => ItemDetailSheet(item: item),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            if (bottomRowItems.isNotEmpty) const SizedBox(height: 16),
+                            if (bottomRowItems.isNotEmpty)
+                              SizedBox(
+                                height: 210,
+                                child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                                  itemCount: bottomRowItems.length,
+                                  itemBuilder: (context, index) {
+                                    final item = bottomRowItems[index];
+                                    return Padding(
+                                      padding: const EdgeInsets.only(right: 16),
+                                      child: SizedBox(
+                                        width: 160,
+                                        child: FoodCard(
+                                          item: item,
+                                          isCompact: true,
+                                          onTap: () {
+                                            showModalBottomSheet(
+                                              context: context,
+                                              isScrollControlled: true,
+                                              backgroundColor: Colors.transparent,
+                                              builder: (context) => ItemDetailSheet(item: item),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                          ],
+                        );
+                      }
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 260,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  itemCount: MockData.foodItems.length,
-                  itemBuilder: (context, index) {
-                    final item = MockData.foodItems[index];
-                    return FoodCard(
-                      item: item,
-                      onTap: () {
-                        showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (context) => ItemDetailSheet(item: item),
-                        );
-                      },
-                    );
-                  },
                 ),
               ).animate().fadeIn(delay: 600.ms).slideX(begin: 0.1),
               
@@ -180,9 +283,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                itemCount: 2,
+                itemCount: 6,
                 itemBuilder: (context, index) {
-                  final item = MockData.foodItems[index + 2];
+                  final item = MockData.foodItems[(index * 2 + 1) % MockData.foodItems.length];
                   return _buildListTile(context, item);
                 },
               ).animate().fadeIn(delay: 800.ms),
@@ -190,35 +293,64 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(context),
+      bottomNavigationBar: const SharedBottomNav(currentIndex: 0),
     );
   }
 
-  Widget _buildOfferCard(BuildContext context, String title, String subtitle, Color color) {
+  Widget _buildCouponCard(BuildContext context, String title, String code, String badgeText, Color badgeColor) {
     return Container(
-      width: 300,
-      margin: const EdgeInsets.only(right: 16),
-      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.only(left: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: color.withOpacity(0.5)),
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Row(
         children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.displayLarge?.copyWith(
-              fontSize: 32,
-              color: color,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.grey.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              badgeText,
+              style: TextStyle(
+                color: badgeColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: const TextStyle(color: Colors.white70, fontSize: 16),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  code,
+                  style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.w500),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -278,60 +410,65 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ],
             ),
           ),
-          GestureDetector(
-            onTap: () {
-              ref.read(cartProvider.notifier).addToCart(item);
+          Consumer(
+            builder: (context, ref, child) {
+              final cartItems = ref.watch(cartProvider);
+              final cartNotifier = ref.read(cartProvider.notifier);
+              final cartItemIndex = cartItems.indexWhere((element) => element.foodItem.id == item.id);
+              final isInCart = cartItemIndex != -1;
+              final quantity = isInCart ? cartItems[cartItemIndex].quantity : 0;
+
+              if (isInCart) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceTint.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Theme.of(context).colorScheme.primary),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove, size: 16),
+                        onPressed: () => cartNotifier.updateQuantity(item.id, quantity - 1),
+                        color: Theme.of(context).colorScheme.primary,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      ),
+                      Text(
+                        quantity.toString(),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add, size: 16),
+                        onPressed: () => cartNotifier.updateQuantity(item.id, quantity + 1),
+                        color: Theme.of(context).colorScheme.primary,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return GestureDetector(
+                onTap: () {
+                  cartNotifier.addToCart(item);
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.add, color: Colors.white, size: 20),
+                ),
+              );
             },
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.add, color: Colors.white, size: 20),
-            ),
           ),
         ],
       ),
     ),
-    );
-  }
-
-  Widget _buildBottomNav(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-      height: 70,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(35),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildNavItem(Icons.home_rounded, true, () => context.go('/home')),
-          _buildNavItem(Icons.restaurant_menu_rounded, false, () {}),
-          _buildNavItem(Icons.shopping_cart_rounded, false, () => context.push('/cart')),
-          _buildNavItem(Icons.person_rounded, false, () => context.push('/profile')),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavItem(IconData icon, bool isSelected, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Icon(
-        icon,
-        color: isSelected ? Theme.of(context).colorScheme.primary : Colors.white38,
-        size: 28,
-      ),
     );
   }
 }

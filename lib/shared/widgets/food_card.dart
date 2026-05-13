@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/mock_data.dart';
+import '../providers/cart_provider.dart';
 import 'package:shimmer/shimmer.dart';
 
 class FoodCard extends StatelessWidget {
   final FoodItem item;
   final VoidCallback onTap;
+  final bool isCompact;
 
   const FoodCard({
     super.key,
     required this.item,
     required this.onTap,
+    this.isCompact = false,
   });
 
   @override
@@ -18,16 +22,14 @@ class FoodCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 200,
-        margin: const EdgeInsets.only(right: 16),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: Theme.of(context).cardTheme.color,
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
+              color: Theme.of(context).cardTheme.shadowColor ?? Colors.black.withOpacity(0.1),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -41,13 +43,13 @@ class FoodCard extends StatelessWidget {
                 children: [
                   CachedNetworkImage(
                     imageUrl: item.imageUrl,
-                    height: 140,
+                    height: isCompact ? 100 : 140,
                     width: double.infinity,
                     fit: BoxFit.cover,
                     placeholder: (context, url) => Shimmer.fromColors(
                       baseColor: Colors.grey[800]!,
                       highlightColor: Colors.grey[700]!,
-                      child: Container(color: Colors.white, height: 140),
+                      child: Container(color: Colors.white, height: isCompact ? 100 : 140),
                     ),
                   ),
                   Positioned(
@@ -102,12 +104,14 @@ class FoodCard extends StatelessWidget {
                     item.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 16),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: isCompact ? 14 : 16),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     item.prepTime,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -118,15 +122,76 @@ class FoodCard extends StatelessWidget {
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: Theme.of(context).colorScheme.primary,
                           fontWeight: FontWeight.bold,
+                          fontSize: isCompact ? 14 : null,
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.add, color: Colors.white, size: 20),
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final cartItems = ref.watch(cartProvider);
+                          final cartNotifier = ref.read(cartProvider.notifier);
+                          final cartItemIndex = cartItems.indexWhere((element) => element.foodItem.id == item.id);
+                          final isInCart = cartItemIndex != -1;
+                          final quantity = isInCart ? cartItems[cartItemIndex].quantity : 0;
+
+                          if (isInCart) {
+                            return Container(
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surfaceTint.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Theme.of(context).colorScheme.primary),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.remove, size: 16),
+                                    onPressed: () => cartNotifier.updateQuantity(item.id, quantity - 1),
+                                    color: Theme.of(context).colorScheme.primary,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(minWidth: 32),
+                                  ),
+                                  Text(
+                                    quantity.toString(),
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.add, size: 16),
+                                    onPressed: () => cartNotifier.updateQuantity(item.id, quantity + 1),
+                                    color: Theme.of(context).colorScheme.primary,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(minWidth: 32),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          return GestureDetector(
+                            onTap: () {
+                              cartNotifier.addToCart(item);
+                            },
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isCompact ? 12 : 16, 
+                                vertical: isCompact ? 6 : 8
+                              ),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.5)),
+                              ),
+                              child: Text(
+                                'ADD',
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: isCompact ? 12 : 14,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),

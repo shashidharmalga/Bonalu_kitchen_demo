@@ -11,10 +11,11 @@ class PosterScreen extends StatelessWidget {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Background Image (Mock)
+          // Background Image
           Image.network(
-            'https://images.unsplash.com/photo-1567337710282-00832b415979?q=80&w=1000&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1589302168068-964664d93dc0?q=80&w=800&auto=format&fit=crop',
             fit: BoxFit.cover,
+            alignment: Alignment.center,
           ),
           
           // Gradient Overlay
